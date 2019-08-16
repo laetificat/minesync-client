@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/pierrre/archivefile/zip"
 )
@@ -21,6 +22,7 @@ const linuxDir string = "/.minecraft/saves"
 const windows10Dir string = "/%appdata%/Local/Packages/Microsoft.MinecraftUWP_8wekyb3d8bbwe/LocalState/games/com.mojang"
 
 const syncServer string = "127.0.0.1:9999"
+const syncServerList string = "127.0.0.1:9998"
 
 type savegame struct {
 	os.FileInfo
@@ -30,6 +32,15 @@ type savegame struct {
 type syncObject struct {
 	Name string
 	Data []byte
+}
+
+type saveList struct {
+	Saves []save
+}
+
+type save struct {
+	Name             string
+	LastModifiedDate time.Time
 }
 
 func main() {
@@ -49,7 +60,27 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
+	// todo: use list of saves from server to only sync the saves that are newer
+	// todo: download newer versions from server
+	saves, err := getListOfSavesFromServer()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Printf("%s", saves)
+
 	syncFilesToServer(savegames)
+}
+
+// Gets the list of saves from the server.
+func getListOfSavesFromServer() ([]save, error) {
+	sl := saveList{}
+
+	c, err := net.Dial("tcp", syncServerList)
+	err = gob.NewDecoder(c).Decode(&sl)
+
+	return sl.Saves, err
 }
 
 // Returns the savegame path for the system.
