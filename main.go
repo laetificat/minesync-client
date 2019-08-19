@@ -60,17 +60,73 @@ func main() {
 		fmt.Println(err.Error())
 	}
 
-	// todo: use list of saves from server to only sync the saves that are newer
-	// todo: download newer versions from server
 	saves, err := getListOfSavesFromServer()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("%s", saves)
+	savesToUpload := getSavesToUpload(savegames, saves)
+	savesToDownload := getSavesToDownload(savegames, saves)
 
-	syncFilesToServer(savegames)
+	//todo: remove after debugging
+	fmt.Println("list of saves from server")
+	fmt.Printf("%s", saves)
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("saves to upload")
+	fmt.Printf("%s", savesToUpload)
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("saves to download")
+	fmt.Printf("%s", savesToDownload)
+	fmt.Println("")
+	fmt.Println("")
+
+	syncFilesToServer(savesToUpload)
+	syncFilesFromServer(savesToDownload)
+}
+
+func getSavesToUpload(s []savegame, rs []save) []savegame {
+	l := []savegame{}
+
+OUTER:
+	for _, v := range s {
+		for _, v1 := range rs {
+			n := "minesync_" + strings.ReplaceAll(v.FileInfo.Name(), " ", "_") + ".zip"
+			if n == v1.Name {
+				if v.FileInfo.ModTime().After(v1.LastModifiedDate) {
+					l = append(l, v)
+				}
+				continue OUTER
+			}
+		}
+
+		l = append(l, v)
+	}
+
+	return l
+}
+
+func getSavesToDownload(s []savegame, rs []save) []save {
+	l := []save{}
+
+OUTER:
+	for _, v := range rs {
+		for _, v1 := range s {
+			n := "minesync_" + strings.ReplaceAll(v1.FileInfo.Name(), " ", "_") + ".zip"
+			if n == v.Name {
+				if v.LastModifiedDate.After(v1.FileInfo.ModTime()) {
+					l = append(l, v)
+				}
+				continue OUTER
+			}
+		}
+
+		l = append(l, v)
+	}
+
+	return l
 }
 
 // Gets the list of saves from the server.
@@ -169,6 +225,11 @@ func syncFilesToServer(files []savegame) {
 			return
 		}
 	}
+}
+
+// Downloads the savegames from the server
+func syncFilesFromServer(files []save) {
+	// todo: download newer versions from server
 }
 
 // Creates the zip file for the given savegame
