@@ -23,6 +23,7 @@ const windows10Dir string = "/%appdata%/Local/Packages/Microsoft.MinecraftUWP_8w
 
 const syncServer string = "127.0.0.1:9999"
 const syncServerList string = "127.0.0.1:9998"
+const downloadServer string = "127.0.0.1:9997"
 
 type savegame struct {
 	os.FileInfo
@@ -229,7 +230,22 @@ func syncFilesToServer(files []savegame) {
 
 // Downloads the savegames from the server
 func syncFilesFromServer(files []save) {
-	// todo: download newer versions from server
+	fmt.Println("Downloaded saves")
+	for _, s := range files {
+		c, err := net.Dial("tcp", downloadServer)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		gob.NewEncoder(c).Encode(s)
+
+		decoded := syncObject{}
+		gob.NewDecoder(c).Decode(&decoded)
+
+		// todo: write data to minecraft save folder and unzip
+		fmt.Println(decoded.Name)
+	}
 }
 
 // Creates the zip file for the given savegame
